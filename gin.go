@@ -56,9 +56,7 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 		errObj.Validation = MakeErrorsSlice(et)
 
 	case error:
-		errCode = getErrCode(et)
-
-		errObj.Message = et.Error()
+		errCode, errObj.Message = getErrCode(et)
 
 	case map[string]error:
 		msgs := make(map[string]string)
@@ -72,18 +70,23 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 	return errCode, errObj
 }
 
-func getErrCode(et error) (errCode int) {
-	switch et.Error() {
+func getErrCode(et error) (errCode int, msg string) {
+	msg = et.Error()
+	switch msg {
 	case ErrNotFound.Error():
 		errCode = http.StatusNotFound
 	case ErrNoMethod.Error():
 		errCode = http.StatusMethodNotAllowed
 	case ErrServerError.Error(), sql.ErrConnDone.Error(), sql.ErrTxDone.Error():
 		errCode = http.StatusInternalServerError
-	case ErrRecordNotFound.Error(), sql.ErrNoRows.Error():
+	case ErrRecordNotFound.Error():
 		errCode = http.StatusNotFound
+	case sql.ErrNoRows.Error():
+		errCode = http.StatusNotFound
+		msg = ErrRecordNotFound.Error()
 	default:
 		errCode = http.StatusBadRequest
 	}
+
 	return
 }

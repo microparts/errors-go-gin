@@ -33,7 +33,8 @@ func TestMakeResponse(t *testing.T) {
 		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: "common err 1; common err 2"}},
 		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, isErr: true, httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: map[string]string{"common_err": "common err"}}},
 
-		{name: "sql error no rows", err: sql.ErrNoRows, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: sql.ErrNoRows.Error()}},
+		{name: "record not found", err: ErrRecordNotFound, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
+		{name: "sql error no rows", err: sql.ErrNoRows, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
 		{name: "sql error conn done", err: sql.ErrConnDone, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrConnDone.Error()}},
 		{name: "sql error tx done", err: sql.ErrTxDone, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrTxDone.Error()}},
 	}
