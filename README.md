@@ -16,10 +16,10 @@ import (
 )
 
 func main() {
-	ginErrors.InitValidator()
+	ginerrors.InitValidator()
 	r := gin.New()
 	r.GET("/", func(c*gin.Context) {c.JSON(http.StatusOK,`{"status":"ok"}`)})
-	r.GET("/err", func(c *gin.Context) { ginErrors.Response(c, errors.New("error")) })
+	r.GET("/err", func(c *gin.Context) { ginerrors.Response(c, errors.New("error")) })
 	_ = r.Run(":8080")
 }
 ```

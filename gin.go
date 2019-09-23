@@ -40,11 +40,6 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 	errObj := &ErrorObject{}
 	errCode := http.StatusBadRequest
 
-	if hasSQLErr, errCode, msg := checkSQLErr(err); hasSQLErr {
-		errObj.Message = msg
-		return errCode, errObj
-	}
-
 	switch et := err.(type) {
 	case []error:
 		errCode = http.StatusInternalServerError
@@ -53,6 +48,7 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 			msgs = append(msgs, e.Error())
 		}
 		errObj.Message = strings.Join(msgs, "; ")
+
 	case validator.ValidationErrors:
 		errCode = http.StatusUnprocessableEntity
 
@@ -76,37 +72,15 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 	return errCode, errObj
 }
 
-func checkSQLErr(err interface{}) (bool, int, string) {
-	var (
-		errCode   int
-		hasSQLErr = true
-		msg       = ""
-	)
-	switch err {
-	case sql.ErrNoRows:
-		errCode = http.StatusNotFound
-	case sql.ErrTxDone, sql.ErrConnDone:
-		errCode = http.StatusInternalServerError
-	default:
-		hasSQLErr = false
-	}
-
-	if hasSQLErr {
-		msg = err.(error).Error()
-	}
-
-	return hasSQLErr, errCode, msg
-}
-
 func getErrCode(et error) (errCode int) {
 	switch et.Error() {
 	case ErrNotFound.Error():
 		errCode = http.StatusNotFound
 	case ErrNoMethod.Error():
 		errCode = http.StatusMethodNotAllowed
-	case ErrServerError.Error():
+	case ErrServerError.Error(), sql.ErrConnDone.Error(), sql.ErrTxDone.Error():
 		errCode = http.StatusInternalServerError
-	case ErrRecordNotFound.Error():
+	case ErrRecordNotFound.Error(), sql.ErrNoRows.Error():
 		errCode = http.StatusNotFound
 	default:
 		errCode = http.StatusBadRequest
