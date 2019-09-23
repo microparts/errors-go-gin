@@ -1,10 +1,11 @@
-package ginErrors
+package ginerrors
 
 import (
+	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -21,32 +22,37 @@ type ErrorObject struct {
 }
 
 var (
-	NotFound       = errors.New("Route not found")
-	NoMethod       = errors.New("Method not allowed")
-	ServerError    = errors.New("Internal server error")
-	RecordNotFound = errors.New("record not found")
+	ErrNotFound       = errors.New("route not found")
+	ErrNoMethod       = errors.New("method not allowed")
+	ErrServerError    = errors.New("internal server error")
+	ErrRecordNotFound = errors.New("record not found")
 )
 
+//Response makes common error response
 func Response(c *gin.Context, err interface{}) {
 	errCode, data := MakeResponse(err)
 	resp := ResponseObject{Error: *data}
 	c.AbortWithStatusJSON(errCode, resp)
 }
 
+//MakeResponse makes ErrorObject based on error type
 func MakeResponse(err interface{}) (int, *ErrorObject) {
 	errObj := &ErrorObject{}
 	errCode := http.StatusBadRequest
 
+	if hasSQLErr, errCode, msg := checkSQLErr(err); hasSQLErr {
+		errObj.Message = msg
+		return errCode, errObj
+	}
+
 	switch et := err.(type) {
-	case gorm.Errors:
-		if gorm.IsRecordNotFoundError(et) {
-			errCode = http.StatusNotFound
-		} else {
-			errCode = http.StatusBadRequest
+	case []error:
+		errCode = http.StatusInternalServerError
+		msgs := make([]string, 0)
+		for _, e := range err.([]error) {
+			msgs = append(msgs, e.Error())
 		}
-
-		errObj.Message = et.Error()
-
+		errObj.Message = strings.Join(msgs, "; ")
 	case validator.ValidationErrors:
 		errCode = http.StatusUnprocessableEntity
 
@@ -65,21 +71,42 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 		}
 
 		errObj.Message = msgs
-
 	}
 
 	return errCode, errObj
 }
 
+func checkSQLErr(err interface{}) (bool, int, string) {
+	var (
+		errCode   int
+		hasSQLErr = true
+		msg       = ""
+	)
+	switch err {
+	case sql.ErrNoRows:
+		errCode = http.StatusNotFound
+	case sql.ErrTxDone, sql.ErrConnDone:
+		errCode = http.StatusInternalServerError
+	default:
+		hasSQLErr = false
+	}
+
+	if hasSQLErr {
+		msg = err.(error).Error()
+	}
+
+	return hasSQLErr, errCode, msg
+}
+
 func getErrCode(et error) (errCode int) {
 	switch et.Error() {
-	case NotFound.Error():
+	case ErrNotFound.Error():
 		errCode = http.StatusNotFound
-	case NoMethod.Error():
+	case ErrNoMethod.Error():
 		errCode = http.StatusMethodNotAllowed
-	case ServerError.Error():
+	case ErrServerError.Error():
 		errCode = http.StatusInternalServerError
-	case RecordNotFound.Error():
+	case ErrRecordNotFound.Error():
 		errCode = http.StatusNotFound
 	default:
 		errCode = http.StatusBadRequest
