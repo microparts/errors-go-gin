@@ -52,16 +52,6 @@ func (v *defaultValidator) lazyinit() {
 	v.once.Do(func() {
 		v.validate = validator.New()
 		v.validate.SetTagName("binding")
-		v.validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
-
-			if name == "-" {
-				return ""
-			}
-
-			return name
-		})
-
 		// add any custom validations etc. here
 	})
 }

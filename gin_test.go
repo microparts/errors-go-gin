@@ -17,26 +17,25 @@ func TestMakeResponse(t *testing.T) {
 	type testCase struct {
 		name      string
 		err       interface{}
-		isErr     bool
 		httpCode  int
 		errObject *ErrorObject
 	}
 
 	cases := []testCase{
-		{name: "common error", err: errors.New("common err"), isErr: true, httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: "common err"}},
+		{name: "common error", err: errors.New("common err"), httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: "common err"}},
 
-		{name: "validation error", err: makeValidationError(), isErr: true, httpCode: http.StatusUnprocessableEntity, errObject: &ErrorObject{Message: "validation error", Validation: map[string][]string{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}, Debug: ""}},
+		{name: "validation error", err: makeValidationError(), httpCode: http.StatusUnprocessableEntity, errObject: &ErrorObject{Message: "validation error", Validation: map[string][]string{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}, Debug: ""}},
 
-		{name: "mux err no method allowed", err: ErrNoMethod, isErr: true, httpCode: http.StatusMethodNotAllowed, errObject: &ErrorObject{Message: ErrNoMethod.Error()}},
-		{name: "mux err route not found", err: ErrNotFound, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrNotFound.Error()}},
+		{name: "mux err no method allowed", err: ErrNoMethod, httpCode: http.StatusMethodNotAllowed, errObject: &ErrorObject{Message: ErrNoMethod.Error()}},
+		{name: "mux err route not found", err: ErrNotFound, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrNotFound.Error()}},
 
-		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: "common err 1; common err 2"}},
-		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, isErr: true, httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: map[string]string{"common_err": "common err"}}},
+		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: "common err 1; common err 2"}},
+		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: map[string]string{"common_err": "common err"}}},
 
-		{name: "record not found", err: ErrRecordNotFound, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error no rows", err: sql.ErrNoRows, isErr: true, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error conn done", err: sql.ErrConnDone, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrConnDone.Error()}},
-		{name: "sql error tx done", err: sql.ErrTxDone, isErr: true, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrTxDone.Error()}},
+		{name: "record not found", err: ErrRecordNotFound, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
+		{name: "sql error no rows", err: sql.ErrNoRows, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
+		{name: "sql error conn done", err: sql.ErrConnDone, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrConnDone.Error()}},
+		{name: "sql error tx done", err: sql.ErrTxDone, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrTxDone.Error()}},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -78,9 +77,7 @@ func makeValidationError() error {
 	}
 
 	// use a single instance of Validate, it caches struct info
-	var validate *validator.Validate
-
-	validate = validator.New()
+	validate := validator.New()
 	_ = validate.RegisterValidation("is-awesome", ValidateMyVal)
 
 	s := MyStruct{String: "awesome"}
