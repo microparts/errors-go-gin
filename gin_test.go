@@ -2,13 +2,13 @@ package ginerrors
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -39,7 +39,7 @@ func TestMakeResponse(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			errCode, errObject := MakeResponse(testCase.err)
+			errCode, errObject := MakeResponse(testCase.err, "ru")
 			assert.Equal(t, testCase.errObject, errObject, testCase.name)
 			assert.Equal(t, testCase.httpCode, errCode, testCase.name)
 		})
@@ -47,7 +47,6 @@ func TestMakeResponse(t *testing.T) {
 }
 
 func setupRouter() *gin.Engine {
-	InitValidator()
 	r := gin.New()
 
 	r.NoRoute(func(c *gin.Context) { Response(c, ErrNotFound) })

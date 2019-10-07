@@ -1,2 +1,5 @@
 .idea
 vendor
+.golangci.yml
+c.out
+coverage.html

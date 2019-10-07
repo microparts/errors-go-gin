@@ -2,13 +2,31 @@ package ginerrors
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"gopkg.in/go-playground/validator.v9"
 )
+
+type langName string
+type validationRule string
+type errorPattern string
+type validationError map[validationRule]errorPattern
+
+func (ve errorPattern) string() string {
+	return string(ve)
+}
+
+var CommonValidationErrors = map[langName]validationError{
+	"ru": {
+		"ek":       "Ошибка валидации для свойства `%s` с правилом `%s`",
+		"required": "Свойство `%s` обязательно для заполнения",
+		"gt":       "Свойство `%s` должно содержать более `%s` элементов",
+	},
+}
 
 type ResponseObject struct {
 	Error ErrorObject `json:"error,omitempty"`
@@ -22,6 +40,8 @@ type ErrorObject struct {
 }
 
 var (
+	defaultLang = "ru"
+
 	ErrNotFound       = errors.New("route not found")
 	ErrNoMethod       = errors.New("method not allowed")
 	ErrServerError    = errors.New("internal server error")
@@ -30,13 +50,22 @@ var (
 
 //Response makes common error response
 func Response(c *gin.Context, err interface{}) {
-	errCode, data := MakeResponse(err)
+	errCode, data := MakeResponse(err, getLang(c))
 	resp := ResponseObject{Error: *data}
 	c.AbortWithStatusJSON(errCode, resp)
 }
 
+func getLang(c *gin.Context) langName {
+	lang := c.GetHeader("lang")
+	if lang == "" {
+		lang = c.DefaultQuery("lang", defaultLang)
+	}
+
+	return langName(lang)
+}
+
 //MakeResponse makes ErrorObject based on error type
-func MakeResponse(err interface{}) (int, *ErrorObject) {
+func MakeResponse(err interface{}, lang langName) (int, *ErrorObject) {
 	errObj := &ErrorObject{}
 	errCode := http.StatusBadRequest
 
@@ -53,7 +82,7 @@ func MakeResponse(err interface{}) (int, *ErrorObject) {
 		errCode = http.StatusUnprocessableEntity
 
 		errObj.Message = "validation error"
-		errObj.Validation = MakeErrorsSlice(et)
+		errObj.Validation = MakeErrorsSlice(et, lang)
 
 	case error:
 		errCode, errObj.Message = getErrCode(et)
@@ -89,4 +118,46 @@ func getErrCode(et error) (errCode int, msg string) {
 	}
 
 	return
+}
+
+// validationErrors Формирование массива ошибок
+func MakeErrorsSlice(err error, lang langName) map[string][]string {
+	ve := map[string][]string{}
+	for _, e := range err.(validator.ValidationErrors) {
+		field := getFieldName(e.Namespace(), e.Field())
+		if _, ok := ve[field]; !ok {
+			ve[field] = []string{}
+		}
+		ve[field] = append(
+			ve[field],
+			getErrMessage(validationRule(e.ActualTag()), field, e.Param(), lang),
+		)
+	}
+	return ve
+}
+func getFieldName(namespace string, field string) string {
+	namespace = strings.Replace(namespace, "]", "", -1)
+	namespace = strings.Replace(namespace, "[", ".", -1)
+	namespaceSlice := strings.Split(namespace, ".")
+	fieldName := field
+
+	if len(namespaceSlice) > 2 {
+		fieldName = strings.Join([]string{strings.Join(namespaceSlice[1:len(namespaceSlice)-1], "."), field}, ".")
+	}
+
+	return fieldName
+}
+
+func getErrMessage(errorType validationRule, field string, param string, lang langName) string {
+	errKey := errorType
+	_, ok := CommonValidationErrors[lang][errorType]
+	if !ok {
+		errKey = "ek"
+	}
+
+	if param != "" && errKey == "ek" {
+		return fmt.Sprintf(CommonValidationErrors[lang][errKey].string(), field, errorType)
+	}
+
+	return fmt.Sprintf(CommonValidationErrors[lang][errKey].string(), field)
 }
