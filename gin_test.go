@@ -11,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/go-playground/validator.v9"
+
+	errs "github.com/microparts/errors-go"
 )
 
 func TestMakeResponse(t *testing.T) {
@@ -18,24 +20,24 @@ func TestMakeResponse(t *testing.T) {
 		name      string
 		err       interface{}
 		httpCode  int
-		errObject *ErrorObject
+		errObject *errs.ErrorObject
 	}
 
 	cases := []testCase{
-		{name: "common error", err: errors.New("common err"), httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: "common err"}},
+		{name: "common error", err: errors.New("common err"), httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: "common err"}},
 
-		{name: "validation error", err: makeValidationError(), httpCode: http.StatusUnprocessableEntity, errObject: &ErrorObject{Message: "validation error", Validation: map[string][]string{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}, Debug: ""}},
+		{name: "validation error", err: makeValidationError(), httpCode: http.StatusUnprocessableEntity, errObject: &errs.ErrorObject{Message: "validation error", Validation: map[errs.FieldName][]errs.ValidationError{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}}},
 
-		{name: "mux err no method allowed", err: ErrNoMethod, httpCode: http.StatusMethodNotAllowed, errObject: &ErrorObject{Message: ErrNoMethod.Error()}},
-		{name: "mux err route not found", err: ErrNotFound, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrNotFound.Error()}},
+		{name: "mux err no method allowed", err: ErrNoMethod, httpCode: http.StatusMethodNotAllowed, errObject: &errs.ErrorObject{Message: ErrNoMethod.Error()}},
+		{name: "mux err route not found", err: ErrNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrNotFound.Error()}},
 
-		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: "common err 1; common err 2"}},
-		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, httpCode: http.StatusBadRequest, errObject: &ErrorObject{Message: map[string]string{"common_err": "common err"}}},
+		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: "common err 1; common err 2"}},
+		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: map[string]string{"common_err": "common err"}}},
 
-		{name: "record not found", err: ErrRecordNotFound, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error no rows", err: sql.ErrNoRows, httpCode: http.StatusNotFound, errObject: &ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error conn done", err: sql.ErrConnDone, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrConnDone.Error()}},
-		{name: "sql error tx done", err: sql.ErrTxDone, httpCode: http.StatusInternalServerError, errObject: &ErrorObject{Message: sql.ErrTxDone.Error()}},
+		{name: "record not found", err: ErrRecordNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error()}},
+		{name: "sql error no rows", err: sql.ErrNoRows, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error()}},
+		{name: "sql error conn done", err: sql.ErrConnDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrConnDone.Error()}},
+		{name: "sql error tx done", err: sql.ErrTxDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrTxDone.Error()}},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
