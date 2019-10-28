@@ -22,6 +22,7 @@ func Response(c *gin.Context, err interface{}) {
 func MakeResponse(err interface{}, lang langName) (int, *errs.ErrorObject) {
 	errObj := &errs.ErrorObject{}
 	errCode := http.StatusBadRequest
+	errType := errs.ErrorTypeError
 
 	switch et := err.(type) {
 	case []error:
@@ -49,6 +50,8 @@ func MakeResponse(err interface{}, lang langName) (int, *errs.ErrorObject) {
 
 		errObj.Message = msgs
 	}
+
+	errObj.Type = &errType
 
 	return errCode, errObj
 }

@@ -8,12 +8,11 @@ Smart generating error code and response for gin mux based on passed error.
 package main
 
 import (
+	"errors"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/microparts/errors-go-gin"
-	
-	"github.com/pkg/errors"
 )
 
 func main() {

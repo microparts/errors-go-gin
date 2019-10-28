@@ -22,22 +22,23 @@ func TestMakeResponse(t *testing.T) {
 		httpCode  int
 		errObject *errs.ErrorObject
 	}
+	errType := errs.ErrorTypeError
 
 	cases := []testCase{
-		{name: "common error", err: errors.New("common err"), httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: "common err"}},
+		{name: "common error", err: errors.New("common err"), httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: "common err", Type: &errType}},
 
-		{name: "validation error", err: makeValidationError(), httpCode: http.StatusUnprocessableEntity, errObject: &errs.ErrorObject{Message: "validation error", Validation: map[errs.FieldName][]errs.ValidationError{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}}},
+		{name: "validation error", err: makeValidationError(), httpCode: http.StatusUnprocessableEntity, errObject: &errs.ErrorObject{Message: "validation error", Validation: map[errs.FieldName][]errs.ValidationError{"String": {"Ошибка валидации для свойства `String` с правилом `%!s(MISSING)`"}}, Type: &errType}},
 
-		{name: "mux err no method allowed", err: ErrNoMethod, httpCode: http.StatusMethodNotAllowed, errObject: &errs.ErrorObject{Message: ErrNoMethod.Error()}},
-		{name: "mux err route not found", err: ErrNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrNotFound.Error()}},
+		{name: "mux err no method allowed", err: ErrNoMethod, httpCode: http.StatusMethodNotAllowed, errObject: &errs.ErrorObject{Message: ErrNoMethod.Error(), Type: &errType}},
+		{name: "mux err route not found", err: ErrNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrNotFound.Error(), Type: &errType}},
 
-		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: "common err 1; common err 2"}},
-		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: map[string]string{"common_err": "common err"}}},
+		{name: "errors slice", err: []error{errors.New("common err 1"), errors.New("common err 2")}, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: "common err 1; common err 2", Type: &errType}},
+		{name: "map of errors", err: map[string]error{"common_err": errors.New("common err")}, httpCode: http.StatusBadRequest, errObject: &errs.ErrorObject{Message: map[string]string{"common_err": "common err"}, Type: &errType}},
 
-		{name: "record not found", err: ErrRecordNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error no rows", err: sql.ErrNoRows, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error()}},
-		{name: "sql error conn done", err: sql.ErrConnDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrConnDone.Error()}},
-		{name: "sql error tx done", err: sql.ErrTxDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrTxDone.Error()}},
+		{name: "record not found", err: ErrRecordNotFound, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error(), Type: &errType}},
+		{name: "sql error no rows", err: sql.ErrNoRows, httpCode: http.StatusNotFound, errObject: &errs.ErrorObject{Message: ErrRecordNotFound.Error(), Type: &errType}},
+		{name: "sql error conn done", err: sql.ErrConnDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrConnDone.Error(), Type: &errType}},
+		{name: "sql error tx done", err: sql.ErrTxDone, httpCode: http.StatusInternalServerError, errObject: &errs.ErrorObject{Message: sql.ErrTxDone.Error(), Type: &errType}},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -67,7 +68,7 @@ func TestResponse(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
-		assert.Equal(t, "{\"error\":{\"message\":\"route not found\"}}\n", w.Body.String())
+		assert.Equal(t, "{\"error\":{\"message\":\"route not found\",\"type\":\"error\"}}\n", w.Body.String())
 	})
 }
 
