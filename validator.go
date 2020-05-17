@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"gopkg.in/go-playground/validator.v9"
 
 	errs "github.com/microparts/errors-go"
@@ -25,6 +26,16 @@ var CommonValidationErrors = map[langName]validationErrors{
 		"ek":       "Ошибка валидации для свойства `%s` с правилом `%s`",
 		"required": "Свойство `%s` обязательно для заполнения",
 		"gt":       "Свойство `%s` должно содержать более `%s` элементов",
+	},
+	"en": {
+		"ek":       "Fail to validate field `%s` with rule `%s`",
+		"required": "Field `%s` is required",
+		"gt":       "Field `%s` must contain more than `%s` elements",
+	},
+	"es": {
+		"ek":       "",
+		"required": "",
+		"gt":       "",
 	},
 }
 
@@ -61,6 +72,24 @@ func makeErrorsSlice(err error, lang langName) map[errs.FieldName][]errs.Validat
 	}
 	return ve
 }
+
+func makeErrorsSliceFromViolations(violations []*errdetails.BadRequest_FieldViolation) map[errs.FieldName][]errs.ValidationError {
+	ve := make(map[errs.FieldName][]errs.ValidationError)
+	for _, v := range violations {
+		if v == nil {
+			continue
+		}
+		field := errs.FieldName(v.Field)
+		if _, ok := ve[field]; !ok {
+			ve[field] = make([]errs.ValidationError, 0)
+		}
+		e := errs.ValidationError(v.Description)
+		ve[field] = append(ve[field], e)
+	}
+
+	return ve
+}
+
 func getFieldName(namespace string, field string) errs.FieldName {
 	namespace = strings.Replace(namespace, "]", "", -1)
 	namespace = strings.Replace(namespace, "[", ".", -1)
